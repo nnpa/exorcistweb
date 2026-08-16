@@ -19,6 +19,8 @@ class Character extends ActiveRecord
     public function rules()
     {
         return [
+            [['health_potions', 'mana_potions'], 'integer'],
+
             [['user_id', 'name'], 'required'],
             ['name', 'string', 'max' => 64],
             ['level', 'default', 'value' => 1],
@@ -74,6 +76,8 @@ class Character extends ActiveRecord
             ];
         }
         return [
+            'healthPotions' => $this->health_potions,
+        'manaPotions' => $this->mana_potions,
             'id' => $this->id,
             'name' => $this->name,
             'level' => $this->level,

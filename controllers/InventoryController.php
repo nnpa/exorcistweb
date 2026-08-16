@@ -66,6 +66,7 @@ class InventoryController extends Controller
             $item->mana_bonus = $itemData['manaBonus'] ?? 0;
             $item->icon_path = $itemData['iconPath'] ?? '';
             $item->socket_count = $itemData['socketCount'] ?? 0;
+$item->difficulty = $itemData['difficulty'] ?? 1;
 
             if (!$item->id) {
                 $item->id = \Yii::$app->security->generateRandomString(36);
@@ -186,18 +187,29 @@ public function actionUnequip()
     return ['success' => true, 'character' => $char->toApiResponse()];
 }
 
-    public function actionDrop()
-    {
-        $slot = (int) Yii::$app->request->post('slot');
-        if ($slot === null) throw new BadRequestHttpException('Missing slot');
+public function actionDrop()
+{
+    $slot = (int) Yii::$app->request->post('slot');
+    if ($slot === null) throw new BadRequestHttpException('Missing slot');
 
-        $char = $this->getCharacter();
-        $inv = Inventory::find()->where(['character_id' => $char->id, 'slot_index' => $slot])->one();
-        if (!$inv) throw new BadRequestHttpException('Item not found');
+    $char = $this->getCharacter();
+    $inv = Inventory::find()->where(['character_id' => $char->id, 'slot_index' => $slot])->one();
+    if (!$inv) throw new BadRequestHttpException('Item not found');
 
-        $inv->delete();
+    $itemId = $inv->item_id;
+    $inv->delete(); // удаляем из inventory
 
-        $char->refresh();
-        return ['success' => true, 'character' => $char->toApiResponse()];
+    // Проверяем, используется ли этот предмет ещё кем-то
+    $exists = Inventory::find()->where(['item_id' => $itemId])->exists();
+    if (!$exists) {
+        // Удаляем сам предмет из items
+        $item = Item::findOne($itemId);
+        if ($item) {
+            $item->delete();
+        }
     }
+
+    $char->refresh();
+    return ['success' => true, 'character' => $char->toApiResponse()];
+}
 }

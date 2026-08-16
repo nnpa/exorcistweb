@@ -17,6 +17,8 @@ class Item extends ActiveRecord
     public function rules()
     {
         return [
+            [['difficulty'], 'integer', 'min' => 1],
+
             [['id', 'name', 'type', 'level', 'rarity'], 'required'],
             ['id', 'string', 'max' => 36],
             ['name', 'string', 'max' => 128],
@@ -30,6 +32,8 @@ class Item extends ActiveRecord
     public function toApiArray()
     {
         return [
+            'difficulty' => $this->difficulty,
+
             'id' => $this->id,
             'name' => $this->name,
             'type' => $this->type,
