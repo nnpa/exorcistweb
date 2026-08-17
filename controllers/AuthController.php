@@ -59,7 +59,7 @@ class AuthController extends Controller
         // Создаём персонажа
         $char = new Character();
         $char->user_id = $user->id;
-        $char->name = 'Hero';
+        $char->name = $login;
         $char->save();
 
         return ['success' => true, 'userId' => $user->id];

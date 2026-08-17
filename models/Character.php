@@ -61,7 +61,10 @@ class Character extends ActiveRecord
     {
         return $this->hasMany(Progress::class, ['character_id' => 'id']);
     }
-
+public function getTalents()
+{
+    return $this->hasMany(CharacterTalent::class, ['character_id' => 'id']);
+}
     // Возвращает полные данные для клиента
     public function toApiResponse()
     {

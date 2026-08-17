@@ -196,17 +196,29 @@ public function actionDrop()
     $inv = Inventory::find()->where(['character_id' => $char->id, 'slot_index' => $slot])->one();
     if (!$inv) throw new BadRequestHttpException('Item not found');
 
+    $item = $inv->item;
     $itemId = $inv->item_id;
-    $inv->delete(); // удаляем из inventory
+
+    // ===== НАЧИСЛЯЕМ ЗОЛОТО =====
+    if ($item) {
+        // Цена продажи = уровень * 5 (как в клиенте)
+        $price = max(1, $item->level * 5);
+        $char->gold += $price;
+        if (!$char->save()) {
+            Yii::error('Failed to save character gold: ' . print_r($char->errors, true));
+            throw new BadRequestHttpException('Failed to update gold');
+        }
+        Yii::info("Sold item {$item->name} for $price gold", 'inventory');
+    }
+
+    // Удаляем из инвентаря
+    $inv->delete();
 
     // Проверяем, используется ли этот предмет ещё кем-то
     $exists = Inventory::find()->where(['item_id' => $itemId])->exists();
-    if (!$exists) {
-        // Удаляем сам предмет из items
-        $item = Item::findOne($itemId);
-        if ($item) {
-            $item->delete();
-        }
+    if (!$exists && $item) {
+        $item->delete();
+        Yii::info("Item {$item->name} deleted from items table", 'inventory');
     }
 
     $char->refresh();
