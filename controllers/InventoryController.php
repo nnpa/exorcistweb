@@ -153,7 +153,9 @@ $item->difficulty = $itemData['difficulty'] ?? 1;
             Yii::error('Failed to equip new item: ' . print_r($inv->errors, true));
             throw new BadRequestHttpException('Failed to equip item');
         }
-
+if (!$char->recalcStats()) {
+    throw new BadRequestHttpException('Failed to update character stats');
+}
         $char->refresh();
         return ['success' => true, 'character' => $char->toApiResponse()];
     }
@@ -182,8 +184,11 @@ public function actionUnequip()
         Yii::error('Failed to unequip item: ' . print_r($inv->errors, true));
         throw new BadRequestHttpException('Failed to unequip item');
     }
-
+if (!$char->recalcStats()) {
+    throw new BadRequestHttpException('Failed to update character stats');
+}
     $char->refresh();
+
     return ['success' => true, 'character' => $char->toApiResponse()];
 }
 
@@ -224,4 +229,6 @@ public function actionDrop()
     $char->refresh();
     return ['success' => true, 'character' => $char->toApiResponse()];
 }
+
+
 }

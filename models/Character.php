@@ -79,6 +79,8 @@ public function getTalents()
             ];
         }
         return [
+            'killCounter' => $this->kill_counter,
+
             'healthPotions' => $this->health_potions,
         'manaPotions' => $this->mana_potions,
             'id' => $this->id,
@@ -101,4 +103,38 @@ public function getTalents()
         ];
     }
     
+    
+   public function recalcStats()
+{
+    $baseHealth = 100 + ($this->level - 1) * 10;
+    $baseMana   = 50 + ($this->level - 1) * 5;
+    $baseDamage = 5 + ($this->level - 1) * 2;
+    $baseDefense = 0;
+
+    $healthBonus = 0;
+    $manaBonus   = 0;
+    $damageBonus = 0;
+    $defenseBonus = 0;
+
+    // Используем правильное имя отношения: inventoryItems
+    foreach ($this->inventoryItems as $inv) {
+        if ($inv->equipped && $inv->item) {
+            $item = $inv->item;
+            $healthBonus += $item->health_bonus;
+            $manaBonus   += $item->mana_bonus;
+            $damageBonus += $item->damage;
+            $defenseBonus += $item->defense;
+        }
+    }
+
+    $this->max_health = $baseHealth + $healthBonus;
+    $this->max_mana   = $baseMana   + $manaBonus;
+    $this->damage     = $baseDamage + $damageBonus;
+    $this->defense    = $baseDefense + $defenseBonus;
+
+    $this->health = min($this->health, $this->max_health);
+    $this->mana   = min($this->mana,   $this->max_mana);
+
+    return $this->save();
+}
 }

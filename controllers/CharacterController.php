@@ -75,4 +75,27 @@ class CharacterController extends Controller
 
     return ['success' => true, 'character' => $character->toApiResponse()];
 }
+
+public function actionLevelup()
+{
+    $user = Yii::$app->user->identity;
+    $character = Character::find()->where(['user_id' => $user->id])->one();
+    if (!$character) {
+        throw new BadRequestHttpException('Character not found');
+    }
+
+    // Увеличиваем уровень на 1
+    $character->level += 1;
+    // Сбрасываем опыт (если нужно) — у нас опыт не используется, так как убийства считаются на клиенте
+    // $character->experience = 0; // опционально
+
+    if (!$character->save()) {
+        return ['error' => $character->errors];
+    }
+
+    return [
+        'success' => true,
+        'character' => $character->toApiResponse(),
+    ];
+}
 }

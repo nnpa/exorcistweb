@@ -59,6 +59,8 @@ $config = [
                 'auth/login' => 'auth/login',
                 'auth/check' => 'auth/check',
                 'inventory/drop' => 'inventory/drop',
+                'character/levelup' => 'character/levelup',
+
 'AUCTION/list' => 'auction/list',
 'AUCTION/my' => 'auction/my',
 'AUCTION/create' => 'auction/create',
