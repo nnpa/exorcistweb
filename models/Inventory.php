@@ -14,15 +14,15 @@ class Inventory extends ActiveRecord
 {
     public static function tableName() { return 'inventory'; }
 
-    public function rules()
-    {
-        return [
-            [['character_id', 'item_id', 'slot_index'], 'required'],
-            ['slot_index', 'integer', 'min' => 0, 'max' => 19],
-            ['equipped', 'boolean'],
-            ['equipped_slot', 'in', 'range' => ['helmet','chest','weapon','shield','legs','boots','gloves']],
-        ];
-    }
+public function rules()
+{
+    return [
+        [['character_id', 'item_id'], 'required'],          // slot_index убираем из required
+        ['slot_index', 'integer'],                          // разрешаем null (пропускается при skipOnEmpty)
+        ['equipped', 'boolean'],
+        ['equipped_slot', 'in', 'range' => ['helmet','chest','weapon','shield','legs','boots','gloves']],
+    ];
+}
 
     public function getItem()
     {

@@ -84,15 +84,15 @@ public function actionLevelup()
         throw new BadRequestHttpException('Character not found');
     }
 
-    // Увеличиваем уровень на 1
-    $character->level += 1;
-    // Сбрасываем опыт (если нужно) — у нас опыт не используется, так как убийства считаются на клиенте
-    // $character->experience = 0; // опционально
-
-    if (!$character->save()) {
-        return ['error' => $character->errors];
+    // Повышаем уровень только если он меньше 50
+    if ($character->level < 50) {
+        $character->level += 1;
+        if (!$character->save()) {
+            return ['error' => $character->errors];
+        }
     }
 
+    // Всегда возвращаем success и данные персонажа (даже если уровень не изменился)
     return [
         'success' => true,
         'character' => $character->toApiResponse(),
