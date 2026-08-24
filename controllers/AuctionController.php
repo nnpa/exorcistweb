@@ -184,83 +184,80 @@ if ($activeLotsCount >= 5) {
     }
 
     // POST /auction/buy – купить лот
-    public function actionBuy()
-    {
-        $lotId = (int)Yii::$app->request->post('lotId');
-        if (!$lotId) {
-            throw new BadRequestHttpException('Missing lotId');
-        }
-
-        $char = $this->getCharacter();
-
-        $lot = AuctionLot::findOne(['id' => $lotId, 'status' => 0]);
-        if (!$lot) {
-            throw new BadRequestHttpException('Lot not found or already sold.');
-        }
-        //if ($lot->seller_id == $char->user_id) {
-        //    throw new BadRequestHttpException('You cannot buy your own lot.');
-       // }
-
-        // Проверяем золото
-        if ($char->gold < $lot->price) {
-            throw new BadRequestHttpException('Not enough gold.');
-        }
-
-        // Проверяем свободные слоты в инвентаре
-        $itemCount = $lot->getItems()->count();
-        $freeSlots = $this->countFreeInventorySlots($char->id);
-        if ($freeSlots < $itemCount) {
-            throw new BadRequestHttpException('Not enough inventory space.');
-        }
-
-        $transaction = Yii::$app->db->beginTransaction();
-        try {
-            // Переводим золото
-            $char->gold -= $lot->price;
-            $sellerChar = Character::findOne(['user_id' => $lot->seller_id]);
-            if ($sellerChar) {
-                $sellerChar->gold += $lot->price;
-                if (!$sellerChar->save()) {
-                    throw new BadRequestHttpException('Failed to update seller gold.');
-                }
-            }
-            if (!$char->save()) {
-                throw new BadRequestHttpException('Failed to update buyer gold.');
-            }
-
-            // Перемещаем предметы в инвентарь покупателя
-            $items = $lot->getItems()->all();
-            foreach ($items as $item) {
-                $freeSlot = $this->findFreeSlot($char->id);
-                if ($freeSlot === null) {
-                    throw new BadRequestHttpException('No free slots found.');
-                }
-                $inv = new Inventory();
-                $inv->character_id = $char->id;
-                $inv->item_id = $item->id;
-                $inv->slot_index = $freeSlot;
-                $inv->equipped = 0;
-                $inv->equipped_slot = null;
-                if (!$inv->save()) {
-                    throw new BadRequestHttpException('Failed to add item to inventory.');
-                }
-            }
-
-            // Помечаем лот как проданный
-            $lot->status = 1;
-            if (!$lot->save()) {
-                throw new BadRequestHttpException('Failed to update lot status.');
-            }
-
-            $transaction->commit();
-        } catch (\Exception $e) {
-            $transaction->rollBack();
-            throw new BadRequestHttpException($e->getMessage());
-        }
-
-        $char->refresh();
-        return ['success' => true, 'character' => $char->toApiResponse()];
+   public function actionBuy()
+{
+    $lotId = (int)Yii::$app->request->post('lotId');
+    if (!$lotId) {
+        throw new BadRequestHttpException('Missing lotId');
     }
+
+    $char = $this->getCharacter();
+
+    $lot = AuctionLot::findOne(['id' => $lotId, 'status' => 0]);
+    if (!$lot) {
+        throw new BadRequestHttpException('Lot not found or already sold.');
+    }
+
+    // Проверяем золото
+    if ($char->gold < $lot->price) {
+        throw new BadRequestHttpException('Not enough gold.');
+    }
+
+    // Проверяем свободные слоты в инвентаре
+    $itemCount = $lot->getItems()->count();
+    $freeSlots = $this->countFreeInventorySlots($char->id);
+    if ($freeSlots < $itemCount) {
+        throw new BadRequestHttpException('Not enough inventory space.');
+    }
+
+    $transaction = Yii::$app->db->beginTransaction();
+    try {
+        // Переводим золото
+        $char->gold -= $lot->price;
+        $sellerChar = Character::findOne(['user_id' => $lot->seller_id]);
+        if ($sellerChar) {
+            $sellerChar->gold += $lot->price;
+            if (!$sellerChar->save()) {
+                throw new BadRequestHttpException('Failed to update seller gold.');
+            }
+        }
+        if (!$char->save()) {
+            throw new BadRequestHttpException('Failed to update buyer gold.');
+        }
+
+        // Перемещаем предметы в инвентарь покупателя
+        $items = $lot->getItems()->all();
+        foreach ($items as $item) {
+            $freeSlot = $this->findFreeSlot($char->id);
+            if ($freeSlot === null) {
+                throw new BadRequestHttpException('No free slots found.');
+            }
+            $inv = new Inventory();
+            $inv->character_id = $char->id;
+            $inv->item_id = $item->id;
+            $inv->slot_index = $freeSlot;
+            $inv->equipped = 0;
+            $inv->equipped_slot = null;
+            if (!$inv->save()) {
+                throw new BadRequestHttpException('Failed to add item to inventory.');
+            }
+        }
+
+        // ===== УДАЛЯЕМ ЛОТ И ЕГО СВЯЗИ (вместо смены статуса) =====
+        // Явно удаляем связанные AuctionLotItem
+        AuctionLotItem::deleteAll(['lot_id' => $lot->id]);
+        // Удаляем сам лот
+        $lot->delete();
+
+        $transaction->commit();
+    } catch (\Exception $e) {
+        $transaction->rollBack();
+        throw new BadRequestHttpException($e->getMessage());
+    }
+
+    $char->refresh();
+    return ['success' => true, 'character' => $char->toApiResponse()];
+}
 
     // POST /auction/cancel – снять лот с продажи (до окончания)
     public function actionCancel()
