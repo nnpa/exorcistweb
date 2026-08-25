@@ -248,4 +248,63 @@ class InventoryController extends Controller
         $char->refresh();
         return ['success' => true, 'character' => $char->toApiResponse()];
     }
+    
+    public function actionUnequip()
+{
+    $request = Yii::$app->request;
+    $equippedSlot = $request->post('equipped_slot');
+    if (!$equippedSlot) {
+        throw new BadRequestHttpException('Missing equipped_slot');
+    }
+
+    $char = $this->getCharacter();
+
+    // Найти экипированный предмет в указанном слоте
+    $inv = Inventory::find()->where([
+        'character_id' => $char->id,
+        'equipped_slot' => $equippedSlot,
+        'equipped' => 1
+    ])->one();
+
+    if (!$inv) {
+        throw new BadRequestHttpException("No item equipped in slot '$equippedSlot'");
+    }
+
+    // Найти свободный слот в инвентаре (0..19)
+    $usedSlots = Inventory::find()
+        ->where(['character_id' => $char->id])
+        ->andWhere(['not', ['slot_index' => null]])
+        ->select('slot_index')
+        ->column();
+
+    $freeSlot = null;
+    for ($i = 0; $i < 20; $i++) {
+        if (!in_array($i, $usedSlots)) {
+            $freeSlot = $i;
+            break;
+        }
+    }
+
+    if ($freeSlot === null) {
+        throw new BadRequestHttpException('Inventory is full, cannot unequip');
+    }
+
+    // Снять предмет
+    $inv->equipped = 0;
+    $inv->equipped_slot = null;
+    $inv->slot_index = $freeSlot;
+
+    if (!$inv->save()) {
+        Yii::error('Failed to unequip: ' . print_r($inv->errors, true));
+        throw new BadRequestHttpException('Failed to unequip item');
+    }
+
+    // Пересчитать статы персонажа (если нужно)
+    if (!$char->recalcStats()) {
+        throw new BadRequestHttpException('Failed to update character stats');
+    }
+    $char->refresh();
+
+    return ['success' => true, 'character' => $char->toApiResponse()];
+}
 }
