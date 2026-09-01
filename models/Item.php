@@ -22,7 +22,7 @@ class Item extends ActiveRecord
             [['id', 'name', 'type', 'level', 'rarity'], 'required'],
             ['id', 'string', 'max' => 36],
             ['name', 'string', 'max' => 128],
-            ['type', 'in', 'range' => ['Weapon','Helmet','Chest','Shield','Legs','Boots','Gloves']],
+            ['type', 'in', 'range' => ['Weapon','Helmet','Chest','Shield','Legs','Boots','Gloves',"Gem"]],
             ['rarity', 'in', 'range' => ['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY']],
             [['damage','defense','health_bonus','mana_bonus','socket_count'], 'integer', 'min' => 0],
             [['icon_path', 'description'], 'string'],

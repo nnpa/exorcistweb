@@ -104,7 +104,39 @@ public function getTalents()
     }
     
     
-   public function recalcStats()
+  private static $setPrefixWords = [
+    'damage'  => ['sharp', 'остро'],
+    'health'  => ['heavy', 'тяжело'],
+    'defense' => ['sturdy', 'крепко'],
+    'mana'    => ['magic', 'магично'],
+];
+
+/**
+ * Определяет "сет" предмета по первому слову его названия.
+ * Название генерируется как "Префикс Суффикс", поэтому
+ * достаточно проверить начало строки.
+ */
+private function detectItemSet($itemName)
+{
+    if (!$itemName) {
+        return null;
+    }
+
+    $lower = mb_strtolower(trim($itemName));
+
+    foreach (self::$setPrefixWords as $setKey => $words) {
+        foreach ($words as $word) {
+            $word = mb_strtolower($word);
+            if (mb_strpos($lower, $word) === 0) {
+                return $setKey;
+            }
+        }
+    }
+
+    return null;
+}
+
+public function recalcStats()
 {
     $baseHealth = 100 + ($this->level - 1) * 10;
     $baseMana   = 50 + ($this->level - 1) * 5;
@@ -116,6 +148,14 @@ public function getTalents()
     $damageBonus = 0;
     $defenseBonus = 0;
 
+    // Счётчики предметов по сетам (по префиксу названия)
+    $setCounts = [
+        'damage'  => 0,
+        'health'  => 0,
+        'defense' => 0,
+        'mana'    => 0,
+    ];
+
     // Используем правильное имя отношения: inventoryItems
     foreach ($this->inventoryItems as $inv) {
         if ($inv->equipped && $inv->item) {
@@ -124,6 +164,50 @@ public function getTalents()
             $manaBonus   += $item->mana_bonus;
             $damageBonus += $item->damage;
             $defenseBonus += $item->defense;
+
+            // ================================================
+            // БОНУСЫ ОТ ВСТАВЛЕННЫХ КАМНЕЙ (сокеты)
+            // ================================================
+            $sockets = \app\models\ItemSocket::find()
+                ->where(['item_id' => $item->id])
+                ->all();
+
+            foreach ($sockets as $socket) {
+
+                if (!$socket->gem_item_id) {
+                    continue;
+                }
+
+                $gem = $socket->gem;
+
+                if (!$gem) {
+                    continue;
+                }
+
+                switch ($gem->name) {
+
+                    case 'Ruby':
+                        $damageBonus += 10;
+                        break;
+
+                    case 'Emerald':
+                        $defenseBonus += 10;
+                        break;
+
+                    case 'Diamond':
+                        $healthBonus += 100;
+                        break;
+                }
+            }
+
+            // ================================================
+            // ОПРЕДЕЛЯЕМ СЕТ ПО ПРЕФИКСУ НАЗВАНИЯ
+            // ================================================
+            $setKey = $this->detectItemSet($item->name);
+
+            if ($setKey !== null && isset($setCounts[$setKey])) {
+                $setCounts[$setKey]++;
+            }
         }
     }
 
@@ -131,6 +215,37 @@ public function getTalents()
     $this->max_mana   = $baseMana   + $manaBonus;
     $this->damage     = $baseDamage + $damageBonus;
     $this->defense    = $baseDefense + $defenseBonus;
+
+    // ================================================
+    // ПРОЦЕНТНЫЕ БОНУСЫ ЗА СЕТЫ (от 2 предметов, макс. 7%)
+    // ================================================
+    foreach ($setCounts as $setKey => $count) {
+
+        if ($count < 2) {
+            continue;
+        }
+
+        $percent = min($count, 7);
+
+        switch ($setKey) {
+
+            case 'health':
+                $this->max_health = (int) round($this->max_health * (1 + $percent / 100));
+                break;
+
+            case 'mana':
+                $this->max_mana = (int) round($this->max_mana * (1 + $percent / 100));
+                break;
+
+            case 'damage':
+                $this->damage = (int) round($this->damage * (1 + $percent / 100));
+                break;
+
+            case 'defense':
+                $this->defense = (int) round($this->defense * (1 + $percent / 100));
+                break;
+        }
+    }
 
     $this->health = min($this->health, $this->max_health);
     $this->mana   = min($this->mana,   $this->max_mana);
