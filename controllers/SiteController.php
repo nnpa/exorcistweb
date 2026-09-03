@@ -15,7 +15,8 @@ use yii\mail\MailerInterface;
 use yii\web\Controller;
 use yii\web\ErrorAction;
 use yii\web\Response;
-
+use app\models\PasswordResetRequestForm;
+use app\models\ResetPasswordForm;
 class SiteController extends Controller
 {
     public function __construct(
@@ -81,6 +82,49 @@ class SiteController extends Controller
         return $this->render('index');
     }
 
+        /**
+     * Запрос на сброс пароля — форма ввода email.
+     */
+    public function actionRequestPasswordReset()
+    {
+        $model = new PasswordResetRequestForm();
+
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            if ($model->sendEmail()) {
+                Yii::$app->session->setFlash('success', 'Проверьте свою электронную почту для дальнейших инструкций.');
+                return $this->goHome();
+            } else {
+                Yii::$app->session->setFlash('error', 'Извините, мы не можем сбросить пароль для указанного email.');
+            }
+        }
+
+        return $this->render('requestPasswordResetToken', [
+            'model' => $model,
+        ]);
+    }
+
+    /**
+     * Сброс пароля по ссылке из письма.
+     */
+    public function actionResetPassword($token)
+    {
+        try {
+            $model = new ResetPasswordForm($token);
+        } catch (InvalidArgumentException $e) {
+            Yii::$app->session->setFlash('error', $e->getMessage());
+            return $this->redirect(['request-password-reset']);
+        }
+
+        if ($model->load(Yii::$app->request->post()) && $model->validate() && $model->resetPassword()) {
+            Yii::$app->session->setFlash('success', 'Новый пароль сохранен.');
+            return $this->redirect(['login']);
+        }
+
+        return $this->render('resetPassword', [
+            'model' => $model,
+        ]);
+    }
+    
     /**
      * Login action.
      *
@@ -88,19 +132,9 @@ class SiteController extends Controller
      */
     public function actionLogin(): Response|string
     {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
+        
 
-        $model = new LoginForm($this->security);
-
-        if ($model->load($this->request->post()) && $model->login()) {
-            return $this->goBack();
-        }
-
-        $model->password = '';
-
-        return $this->render('login', ['model' => $model]);
+        return $this->render('login');
     }
 
     /**

@@ -22,7 +22,19 @@ $config = [
     ],
     'components' => [
         'db' => $db,
-
+        'mailer' => [
+            'class' => 'yii\swiftmailer\Mailer',
+            'viewPath' => '@app/mail',
+            'useFileTransport' => false,  // false для реальной отправки, true для теста (письма в файл)
+            'transport' => [
+                'class' => 'Swift_SmtpTransport',
+                'host' => 'smtp.gmail.com',       // SMTP сервер
+                'username' => 'ibaleksandrov1988@gmail.com',  // Твой email
+                'password' => 'kafs rloj qvhb dnjv',     // Пароль приложения (16 цифр)
+                'port' => '587',                       // Порт (587 для TLS, 465 для SSL)
+                'encryption' => 'tls',                 // tls или ssl
+            ],
+        ],
         // ===== ДОБАВЛЯЕМ ЛОГИРОВАНИЕ =====
         'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0,
