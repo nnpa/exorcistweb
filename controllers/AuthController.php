@@ -60,6 +60,9 @@ class AuthController extends Controller
         $char = new Character();
         $char->user_id = $user->id;
         $char->name = $login;
+        $char->gold = 500;
+        $char->health_potions = 30;
+        $char->mana_potions = 30;
         $char->save();
 
         return ['success' => true, 'userId' => $user->id];

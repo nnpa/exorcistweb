@@ -1,3 +1,8 @@
+# Локальные конфиги (не должны попадать в репозиторий)
+/config/main-local.php
+/config/params-local.php
+/config/db-local.php
+/config/db.php          # если содержит пароль от БД
 # phpstorm project files
 .idea
 

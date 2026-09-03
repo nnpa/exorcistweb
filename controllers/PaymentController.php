@@ -12,8 +12,8 @@ use app\models\Payment;
 class PaymentController extends Controller
 {
     // ЗАМЕНИ на реальные данные из личного кабинета ЮKassa
-    private const SHOP_ID = 'YOUR_SHOP_ID';
-    private const SECRET_KEY = 'YOUR_SECRET_KEY';
+    private const SHOP_ID = '1455733';
+    private const SECRET_KEY = 'test_ef29bfO1jHZflroLUZ1dTqVjPCE4PeWQPy0HxkEq51w';
 
     public $enableCsrfValidation = false;
 
@@ -150,9 +150,11 @@ class PaymentController extends Controller
         $raw = Yii::$app->request->getRawBody();
         $data = json_decode($raw, true);
 
-        if (!$data || !isset($data['object']['id'])) {
-            return $this->response->statusCode = 400;
-        }
+if (!$data || !isset($data['object']['id'])) {
+        // Может быть проверочный пинг от ЮKassa при сохранении URL —
+        // отвечаем 200, чтобы форма в кабинете не ругалась на "опечатку".
+        return 'OK';
+    }
 
         $yookassaPaymentId = $data['object']['id'];
 
